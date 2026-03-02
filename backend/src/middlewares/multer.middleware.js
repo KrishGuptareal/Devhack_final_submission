@@ -1,0 +1,15 @@
+import multer from "multer";
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, './public/temp')
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+    // Extract extension or default to empty
+    const ext = file.originalname.split('.').pop();
+    cb(null, file.fieldname + '-' + uniqueSuffix + (ext ? '.' + ext : ''))
+  }
+})
+
+export const upload = multer({ storage, })
