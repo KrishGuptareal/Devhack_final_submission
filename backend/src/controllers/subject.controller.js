@@ -1,6 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { Subject } from "../models/subject.model.js";
+import { Task } from "../models/task.model.js";
 import { getAuth } from "@clerk/express";
 import { ApiError } from "../utils/apiError.js";
 import mongoose from "mongoose";
@@ -74,6 +75,15 @@ const updateSubject = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Subject not found or unauthorized");
     }
 
+    // If subject is archived or deactivated, delete its pending tasks
+    if (isArchived === true || isActive === false) {
+        await Task.deleteMany({
+            subjectId: id,
+            userId,
+            status: "pending"
+        });
+    }
+
     return res.status(200).json(
         new ApiResponse(200, { subject }, "Subject updated successfully")
     )
@@ -90,8 +100,12 @@ const deleteSubject = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Subject not found or unauthorized");
     }
 
+    // Cascade delete: remove all tasks for this subject
+    const deletedTasks = await Task.deleteMany({ subjectId: req.params.id, userId });
+    console.log(`Deleted ${deletedTasks.deletedCount} tasks for subject ${subject.name}`);
+
     return res.status(200).json(
-        new ApiResponse(200, { subject }, "Subject deleted successfully")
+        new ApiResponse(200, { subject, deletedTasksCount: deletedTasks.deletedCount }, "Subject and associated tasks deleted successfully")
     )
 });
 
